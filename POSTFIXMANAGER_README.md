@@ -1,4 +1,4 @@
-# Postfix Email Access Control Web Interface
+# PostfixManager - Web Interface
 
 A Flask-based web application for managing Postfix multi-tier email access control configuration files through an intuitive web interface.
 

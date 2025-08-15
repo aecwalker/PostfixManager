@@ -1,0 +1,28 @@
+[Unit]
+Description=PostfixManager Web Interface
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=postfixmanager
+Group=postfixmanager
+WorkingDirectory=/opt/postfixmanager
+Environment=PATH=/home/postfixmanager/.local/bin:$PATH
+ExecStart=/usr/bin/python3 /opt/postfixmanager/app.py
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/etc/postfix
+PrivateTmp=yes
+
+# Resource limits
+LimitNOFILE=1024
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

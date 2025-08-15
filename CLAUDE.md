@@ -91,5 +91,6 @@ The application manages these Postfix configuration files with specific validati
 ## Related Documentation
 
 - `README.md` - Postfix system architecture and configuration details
-- `WEBAPP_README.md` - Comprehensive web application documentation
+- `POSTFIXMANAGER_README.md` - Comprehensive web application documentation
+- `INSTALL.md` - Installation, update, and deployment guide
 - `PROMPTS.md` - Development history and AI conversation log
