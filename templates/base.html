@@ -18,11 +18,27 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <button class="btn btn-outline-light btn-sm" onclick="reloadPostfix()">
+                        <button class="btn btn-outline-light btn-sm me-2" onclick="reloadPostfix()">
                             <i class="fas fa-sync"></i> Reload Postfix
                         </button>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('change_password') }}">
+                                <i class="fas fa-key"></i> Change Password
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

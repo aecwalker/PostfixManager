@@ -112,7 +112,7 @@ install_python_deps() {
         # Install system packages for common dependencies
         if command -v apt &> /dev/null; then
             apt update
-            apt install -y python3-flask python3-waitress python3-ipaddress
+            apt install -y python3-flask python3-waitress python3-ipaddress python3-flask-login python3-werkzeug
             log_success "Python dependencies installed via apt"
         elif command -v yum &> /dev/null; then
             yum install -y python3-flask python3-waitress
