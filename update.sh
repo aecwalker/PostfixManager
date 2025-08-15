@@ -104,9 +104,31 @@ update_dependencies() {
     log_info "Updating Python dependencies..."
     
     cd "$INSTALL_DIR"
-    sudo -u "$SERVICE_USER" pip3 install --user --upgrade -r requirements.txt
     
-    log_success "Dependencies updated"
+    # Try different update methods based on system
+    if sudo -u "$SERVICE_USER" pip3 install --user --upgrade -r requirements.txt 2>/dev/null; then
+        log_success "Dependencies updated via pip --user"
+    elif sudo -u "$SERVICE_USER" pip3 install --user --break-system-packages --upgrade -r requirements.txt 2>/dev/null; then
+        log_success "Dependencies updated via pip --break-system-packages"
+    else
+        log_info "Attempting to update via system package manager..."
+        
+        # Update system packages for common dependencies
+        if command -v apt &> /dev/null; then
+            apt update
+            apt install -y --only-upgrade python3-flask python3-waitress python3-ipaddress
+            log_success "Dependencies updated via apt"
+        elif command -v yum &> /dev/null; then
+            yum update -y python3-flask python3-waitress
+            log_success "Dependencies updated via yum"
+        elif command -v dnf &> /dev/null; then
+            dnf update -y python3-flask python3-waitress
+            log_success "Dependencies updated via dnf"
+        else
+            log_warning "Could not update Python dependencies automatically"
+            log_info "Dependencies may need manual updating"
+        fi
+    fi
 }
 
 restart_service() {

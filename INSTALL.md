@@ -4,15 +4,36 @@ This guide provides step-by-step instructions for installing, updating, and mana
 
 ## Quick Installation
 
-For a quick automated installation, run:
+### Method 1: Clone and Install (Recommended for firewalled environments)
+
+```bash
+# Clone the repository and run installation
+git clone https://github.com/aecwalker/PostfixManager.git
+cd PostfixManager
+sudo ./install.sh
+```
+
+### Method 2: Direct Download (if raw.githubusercontent.com is accessible)
 
 ```bash
 # Download and run the installation script
 curl -sSL https://raw.githubusercontent.com/aecwalker/PostfixManager/main/install.sh | sudo bash
+```
 
-# Or if you have the repository cloned locally:
-git clone https://github.com/aecwalker/PostfixManager.git
-cd PostfixManager
+### Method 3: Via GitHub API (alternative to raw.githubusercontent.com)
+
+```bash
+# Download via GitHub API and run
+curl -H "Accept: application/vnd.github.v3.raw" \
+     -sSL https://api.github.com/repos/aecwalker/PostfixManager/contents/install.sh | sudo bash
+```
+
+### Method 4: Manual Download
+
+```bash
+# Download using wget instead of curl
+wget -O install.sh https://github.com/aecwalker/PostfixManager/raw/main/install.sh
+chmod +x install.sh
 sudo ./install.sh
 ```
 

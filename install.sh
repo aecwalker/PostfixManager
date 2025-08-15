@@ -100,9 +100,34 @@ install_python_deps() {
     log_info "Installing Python dependencies..."
     
     cd "$INSTALL_DIR"
-    sudo -u "$SERVICE_USER" pip3 install --user -r requirements.txt
     
-    log_success "Python dependencies installed"
+    # Try different installation methods based on system
+    if sudo -u "$SERVICE_USER" pip3 install --user -r requirements.txt 2>/dev/null; then
+        log_success "Python dependencies installed via pip --user"
+    elif sudo -u "$SERVICE_USER" pip3 install --user --break-system-packages -r requirements.txt 2>/dev/null; then
+        log_success "Python dependencies installed via pip --break-system-packages"
+    else
+        log_info "Attempting to install via system package manager..."
+        
+        # Install system packages for common dependencies
+        if command -v apt &> /dev/null; then
+            apt update
+            apt install -y python3-flask python3-waitress python3-ipaddress
+            log_success "Python dependencies installed via apt"
+        elif command -v yum &> /dev/null; then
+            yum install -y python3-flask python3-waitress
+            log_success "Python dependencies installed via yum"
+        elif command -v dnf &> /dev/null; then
+            dnf install -y python3-flask python3-waitress
+            log_success "Python dependencies installed via dnf"
+        else
+            log_error "Could not install Python dependencies"
+            log_info "Please install Flask and Waitress manually:"
+            log_info "  - Flask 2.3.3+"
+            log_info "  - Waitress 2.1.2+"
+            exit 1
+        fi
+    fi
 }
 
 setup_config_permissions() {
