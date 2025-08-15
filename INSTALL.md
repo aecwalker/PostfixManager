@@ -11,6 +11,8 @@ For a quick automated installation, run:
 curl -sSL https://raw.githubusercontent.com/aecwalker/PostfixManager/main/install.sh | sudo bash
 
 # Or if you have the repository cloned locally:
+git clone https://github.com/aecwalker/PostfixManager.git
+cd PostfixManager
 sudo ./install.sh
 ```
 
