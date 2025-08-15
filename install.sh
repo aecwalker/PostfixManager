@@ -136,6 +136,11 @@ setup_config_permissions() {
     # Create config directory if it doesn't exist
     mkdir -p "$CONFIG_DIR"
     
+    # Create data directory for user data
+    mkdir -p "/var/lib/postfixmanager"
+    chown "$SERVICE_USER:$SERVICE_USER" "/var/lib/postfixmanager"
+    chmod 755 "/var/lib/postfixmanager"
+    
     # Create empty config files if they don't exist
     local config_files=(
         "blackhole_recipients.conf"
@@ -161,33 +166,9 @@ setup_config_permissions() {
 install_systemd_service() {
     log_info "Installing systemd service..."
     
-    cat > "/etc/systemd/system/$SERVICE_NAME.service" << EOF
-[Unit]
-Description=PostfixManager Web Interface
-After=network.target
-Wants=network.target
-
-[Service]
-Type=simple
-User=$SERVICE_USER
-Group=$SERVICE_USER
-WorkingDirectory=$INSTALL_DIR
-Environment=PATH=/home/$SERVICE_USER/.local/bin:\$PATH
-ExecStart=/usr/bin/python3 $INSTALL_DIR/app.py
-Restart=always
-RestartSec=10
-
-# Security settings
-NoNewPrivileges=yes
-ProtectSystem=strict
-ProtectHome=yes
-ReadWritePaths=$CONFIG_DIR
-PrivateTmp=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
+    # Use the service file from the repository
+    cp "$INSTALL_DIR/postfixmanager.service" "/etc/systemd/system/$SERVICE_NAME.service"
+    
     systemctl daemon-reload
     systemctl enable "$SERVICE_NAME"
     

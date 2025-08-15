@@ -119,6 +119,14 @@ remove_installation_directory() {
     else
         log_info "Installation directory not found"
     fi
+    
+    # Remove data directory
+    if [[ -d "/var/lib/postfixmanager" ]]; then
+        rm -rf "/var/lib/postfixmanager"
+        log_success "Data directory removed"
+    else
+        log_info "Data directory not found"
+    fi
 }
 
 remove_service_user() {

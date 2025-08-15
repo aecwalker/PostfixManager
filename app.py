@@ -15,8 +15,8 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access PostfixManager.'
 
-# User data file path
-USER_DATA_FILE = '/opt/postfixmanager/users.json'
+# User data file path - use a writable location
+USER_DATA_FILE = '/var/lib/postfixmanager/users.json'
 
 # Configuration file paths
 CONFIG_FILES = {

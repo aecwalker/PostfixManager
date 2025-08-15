@@ -17,7 +17,7 @@ RestartSec=10
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/etc/postfix
+ReadWritePaths=/etc/postfix /var/lib/postfixmanager
 PrivateTmp=yes
 
 # Resource limits

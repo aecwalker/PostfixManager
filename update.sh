@@ -138,6 +138,32 @@ update_dependencies() {
     fi
 }
 
+update_system_configuration() {
+    log_info "Updating system configuration..."
+    
+    # Create data directory for user data (new requirement for authentication)
+    if [[ ! -d "/var/lib/postfixmanager" ]]; then
+        mkdir -p "/var/lib/postfixmanager"
+        chown "$SERVICE_USER:$SERVICE_USER" "/var/lib/postfixmanager"
+        chmod 755 "/var/lib/postfixmanager"
+        log_success "Created /var/lib/postfixmanager directory"
+    fi
+    
+    # Update systemd service if needed
+    local service_file="/etc/systemd/system/$SERVICE_NAME.service"
+    if [[ -f "$service_file" ]]; then
+        # Check if service file needs updating for new ReadWritePaths
+        if ! grep -q "/var/lib/postfixmanager" "$service_file"; then
+            log_info "Updating systemd service configuration..."
+            cp "$INSTALL_DIR/postfixmanager.service" "$service_file"
+            systemctl daemon-reload
+            log_success "Systemd service updated"
+        fi
+    fi
+    
+    log_success "System configuration updated"
+}
+
 restart_service() {
     log_info "Starting PostfixManager service..."
     
@@ -225,8 +251,9 @@ main() {
         cleanup_backup
         log_info "No updates available"
     else
-        # Updates applied, update dependencies and restart
+        # Updates applied, update dependencies, system config, and restart
         update_dependencies
+        update_system_configuration
         restart_service
         cleanup_backup
         show_completion_message
