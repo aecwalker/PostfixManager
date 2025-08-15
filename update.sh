@@ -79,17 +79,24 @@ update_repository() {
     
     cd "$INSTALL_DIR"
     
+    # Fix git ownership issues
+    git config --global --add safe.directory "$INSTALL_DIR"
+    chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
+    
     # Check for local changes
-    if ! git diff --quiet || ! git diff --cached --quiet; then
+    if ! sudo -u "$SERVICE_USER" git diff --quiet 2>/dev/null || ! sudo -u "$SERVICE_USER" git diff --cached --quiet 2>/dev/null; then
         log_warning "Local changes detected. Stashing them..."
         sudo -u "$SERVICE_USER" git stash push -m "Auto-stash before update $(date)"
     fi
     
     # Fetch and pull latest changes
     sudo -u "$SERVICE_USER" git fetch origin
-    local current_commit=$(git rev-parse HEAD)
+    local current_commit=$(sudo -u "$SERVICE_USER" git rev-parse HEAD)
     sudo -u "$SERVICE_USER" git pull origin main
-    local new_commit=$(git rev-parse HEAD)
+    local new_commit=$(sudo -u "$SERVICE_USER" git rev-parse HEAD)
+    
+    # Ensure correct ownership after update
+    chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
     
     if [[ "$current_commit" == "$new_commit" ]]; then
         log_info "Already up to date"
