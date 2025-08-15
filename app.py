@@ -65,11 +65,41 @@ def load_users():
 def save_users(users):
     """Save users to JSON file"""
     try:
-        os.makedirs(os.path.dirname(USER_DATA_FILE), exist_ok=True)
+        print(f"[DEBUG] Attempting to save users to: {USER_DATA_FILE}")
+        print(f"[DEBUG] Users data: {users}")
+        
+        # Check if directory exists
+        dir_path = os.path.dirname(USER_DATA_FILE)
+        print(f"[DEBUG] Directory path: {dir_path}")
+        print(f"[DEBUG] Directory exists: {os.path.exists(dir_path)}")
+        
+        # Create directory
+        os.makedirs(dir_path, exist_ok=True)
+        print(f"[DEBUG] Directory created/exists")
+        
+        # Check permissions
+        print(f"[DEBUG] Directory writable: {os.access(dir_path, os.W_OK)}")
+        print(f"[DEBUG] Current working directory: {os.getcwd()}")
+        print(f"[DEBUG] Process UID: {os.getuid()}")
+        
+        # Write file
         with open(USER_DATA_FILE, 'w') as f:
             json.dump(users, f, indent=2)
+        print(f"[DEBUG] File written successfully")
+        
+        # Verify file was created
+        if os.path.exists(USER_DATA_FILE):
+            print(f"[DEBUG] File exists after write: {USER_DATA_FILE}")
+            file_size = os.path.getsize(USER_DATA_FILE)
+            print(f"[DEBUG] File size: {file_size} bytes")
+        else:
+            print(f"[DEBUG] ERROR: File does not exist after write!")
+            
         return True
     except Exception as e:
+        print(f"[DEBUG] Exception in save_users: {type(e).__name__}: {e}")
+        import traceback
+        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
         return False
 
 def read_config_file(file_path):
@@ -182,20 +212,26 @@ def change_password():
                 'password_hash': generate_password_hash(new_password),
                 'must_change_password': False
             }
+            print(f"[DEBUG] About to save users for first-time password set")
             if save_users(users):
+                print(f"[DEBUG] Password set successfully for {current_user.username}")
                 flash('Password set successfully', 'success')
                 return redirect(url_for('index'))
             else:
+                print(f"[DEBUG] Failed to save password for {current_user.username}")
                 flash('Failed to save password', 'error')
         else:
             # Verify current password for existing users
             if check_password_hash(user_data['password_hash'], current_password):
                 users[current_user.username]['password_hash'] = generate_password_hash(new_password)
                 users[current_user.username]['must_change_password'] = False
+                print(f"[DEBUG] About to save users for password change")
                 if save_users(users):
+                    print(f"[DEBUG] Password changed successfully for {current_user.username}")
                     flash('Password changed successfully', 'success')
                     return redirect(url_for('index'))
                 else:
+                    print(f"[DEBUG] Failed to save password change for {current_user.username}")
                     flash('Failed to save password', 'error')
             else:
                 flash('Current password is incorrect', 'error')
