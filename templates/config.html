@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item active">{{ config_type.replace('_', ' ').title() }}</li>
+            </ol>
+        </nav>
+        
+        <h2>{{ config_type.replace('_', ' ').title() }}</h2>
+        <p class="text-muted">File: {{ file_path }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Current Configuration</h5>
+            </div>
+            <div class="card-body">
+                {% if lines %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Line</th>
+                                    <th>Configuration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in lines %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><code>{{ line }}</code></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteLine({{ loop.index0 }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No configuration entries found.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Add New Entry</h5>
+            </div>
+            <div class="card-body">
+                <form id="addForm">
+                    <div class="mb-3">
+                        <label for="newLine" class="form-label">Configuration Line</label>
+                        <input type="text" class="form-control" id="newLine" name="line" required>
+                        <div class="form-text">
+                            {% if config_type == 'blackhole_recipients' %}
+                                Format: email@domain.com
+                            {% elif config_type == 'denied_senders' %}
+                                Format: email@domain.com
+                            {% elif config_type == 'relay_clients' %}
+                                Format: IP/CIDR OK (e.g., 192.168.1.0/24 OK)
+                            {% elif config_type == 'sender_restrictions' %}
+                                Format: IP/CIDR email1 email2 (e.g., 192.168.1.0/24 user@domain.com)
+                            {% elif config_type == 'recipient_restrictions' %}
+                                Format: IP/CIDR recipient1 @domain.com (e.g., 192.168.1.0/24 admin@company.com @internal.com)
+                            {% endif %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Entry
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Help</h5>
+            </div>
+            <div class="card-body">
+                {% if config_type == 'blackhole_recipients' %}
+                    <p><strong>Blackhole Recipients</strong></p>
+                    <p>Email addresses listed here will be silently discarded without generating bounce messages.</p>
+                    <p><strong>Example:</strong><br><code>spam@company.com</code></p>
+                {% elif config_type == 'denied_senders' %}
+                    <p><strong>Denied Senders</strong></p>
+                    <p>Sender addresses that are globally blocked from sending emails through this server.</p>
+                    <p><strong>Example:</strong><br><code>ceo@company.com</code></p>
+                {% elif config_type == 'relay_clients' %}
+                    <p><strong>Open Relay Clients</strong></p>
+                    <p>IP addresses or CIDR ranges that can send emails without restrictions.</p>
+                    <p><strong>Example:</strong><br><code>192.168.40.215/32 OK</code></p>
+                {% elif config_type == 'sender_restrictions' %}
+                    <p><strong>Sender Restrictions</strong></p>
+                    <p>Force specific IP ranges to use only allowed sender addresses.</p>
+                    <p><strong>Example:</strong><br><code>192.168.40.0/24 app1@company.com service@company.com</code></p>
+                {% elif config_type == 'recipient_restrictions' %}
+                    <p><strong>Recipient Restrictions</strong></p>
+                    <p>Limit IP ranges to only send to specific recipients or domains.</p>
+                    <p><strong>Example:</strong><br><code>10.10.10.10/32 admin@company.com @internal.company.com</code></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(`/config/{{ config_type }}/add`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+});
+
+function deleteLine(index) {
+    if (confirm('Are you sure you want to delete this configuration line?')) {
+        const formData = new FormData();
+        formData.append('index', index);
+        
+        fetch(`/config/{{ config_type }}/delete`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

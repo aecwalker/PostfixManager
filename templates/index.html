@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Postfix Multi-Tier Email Access Control System</h1>
+        <p class="lead">Manage your Postfix email relay configuration files through this web interface.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-ban"></i> Blackhole Recipients
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Email addresses to silently discard without bouncing.</p>
+                <a href="{{ url_for('view_config', config_type='blackhole_recipients') }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-slash"></i> Denied Senders
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Sender addresses to block globally across all IPs.</p>
+                <a href="{{ url_for('view_config', config_type='denied_senders') }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-unlock"></i> Open Relay Clients
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Trusted IP addresses with unrestricted sending privileges.</p>
+                <a href="{{ url_for('view_config', config_type='relay_clients') }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-paper-plane"></i> Sender Restrictions
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Force specific sender addresses by IP/CIDR range.</p>
+                <a href="{{ url_for('view_config', config_type='sender_restrictions') }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-inbox"></i> Recipient Restrictions
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Limit destination addresses by IP/CIDR range.</p>
+                <a href="{{ url_for('view_config', config_type='recipient_restrictions') }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> Processing Order</h5>
+            <ol>
+                <li><strong>Blackhole Recipients</strong> - Silently discard emails to specific addresses</li>
+                <li><strong>Denied Senders</strong> - Block specific sender addresses globally</li>
+                <li><strong>Open Relay</strong> - Unrestricted sending for trusted IPs</li>
+                <li><strong>Sender Restrictions</strong> - Force specific sender addresses by IP</li>
+                <li><strong>Recipient Restrictions</strong> - Limit destinations by IP</li>
+            </ol>
+            <p class="mb-0"><strong>Note:</strong> Changes require a Postfix reload to take effect.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
