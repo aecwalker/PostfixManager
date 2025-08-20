@@ -142,7 +142,7 @@ remove_service_user() {
 }
 
 cleanup_config_permissions() {
-    log_info "Resetting configuration file permissions..."
+    log_info "Configuration files preserved..."
     
     local config_files=(
         "blackhole_recipients.conf"
@@ -155,12 +155,12 @@ cleanup_config_permissions() {
     for config_file in "${config_files[@]}"; do
         local file_path="$CONFIG_DIR/$config_file"
         if [[ -f "$file_path" ]]; then
-            chown root:postfix "$file_path"
-            chmod 640 "$file_path"
+            # Note: Permissions on /etc/postfix files are preserved as requested
+            log_info "Preserved $file_path"
         fi
     done
     
-    log_success "Configuration file permissions reset"
+    log_success "Configuration files preserved with original permissions"
 }
 
 show_completion_message() {

@@ -131,7 +131,7 @@ install_python_deps() {
 }
 
 setup_config_permissions() {
-    log_info "Setting up configuration file permissions..."
+    log_info "Setting up configuration directories..."
     
     # Create config directory if it doesn't exist
     mkdir -p "$CONFIG_DIR"
@@ -141,7 +141,7 @@ setup_config_permissions() {
     chown "$SERVICE_USER:$SERVICE_USER" "/var/lib/postfixmanager"
     chmod 755 "/var/lib/postfixmanager"
     
-    # Create empty config files if they don't exist
+    # Create empty config files if they don't exist (without changing permissions)
     local config_files=(
         "blackhole_recipients.conf"
         "denied_senders.conf" 
@@ -156,11 +156,10 @@ setup_config_permissions() {
             touch "$file_path"
             log_info "Created $file_path"
         fi
-        chown "$SERVICE_USER:postfix" "$file_path"
-        chmod 640 "$file_path"
+        # Note: Permissions on /etc/postfix files are preserved as requested
     done
     
-    log_success "Configuration permissions set up"
+    log_success "Configuration directories set up"
 }
 
 install_systemd_service() {
