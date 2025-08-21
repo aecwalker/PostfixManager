@@ -448,6 +448,164 @@ def search_logs():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/logs/trace')
+@login_required
+def trace_mail():
+    """Trace mail flow through Postfix logs using message IDs and email addresses"""
+    try:
+        log_file = '/var/log/mail.log'
+        source_email = request.args.get('source', '').strip()
+        dest_email = request.args.get('destination', '').strip()
+        message_id = request.args.get('message_id', '').strip()
+        hours_back = int(request.args.get('hours_back', '24'))
+        
+        if not any([source_email, dest_email, message_id]):
+            return jsonify({'error': 'At least one search criteria is required (source, destination, or message_id)'}), 400
+        
+        import re
+        import datetime
+        from collections import defaultdict
+        
+        # Message tracking
+        message_traces = defaultdict(list)
+        queue_ids = set()
+        related_queue_ids = set()
+        
+        # Regex patterns for Postfix log parsing
+        patterns = {
+            'message_id': re.compile(r'message-id=<([^>]+)>'),
+            'queue_id': re.compile(r'postfix/[^:]+\[[\d]+\]: ([A-F0-9]+):'),
+            'from': re.compile(r'from=<([^>]*)>'),
+            'to': re.compile(r'to=<([^>]*)>'),
+            'status': re.compile(r'status=(\w+)'),
+            'delay': re.compile(r'delay=([\d.]+)'),
+            'dsn': re.compile(r'dsn=([\d.]+)'),
+            'relay': re.compile(r'relay=([^,]+)'),
+            'timestamp': re.compile(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})'),
+        }
+        
+        matching_entries = []
+        line_number = 0
+        
+        # Read log file and find relevant entries
+        with open(log_file, 'r') as f:
+            for line in f:
+                line_number += 1
+                line = line.rstrip('\n')
+                
+                # Skip non-postfix lines
+                if 'postfix/' not in line:
+                    continue
+                
+                # Extract basic info
+                timestamp_match = patterns['timestamp'].search(line)
+                queue_id_match = patterns['queue_id'].search(line)
+                
+                if not queue_id_match:
+                    continue
+                
+                current_queue_id = queue_id_match.group(1)
+                
+                # Check if this line matches our search criteria
+                matches_criteria = False
+                match_reasons = []
+                
+                # Check message ID
+                if message_id:
+                    msg_id_match = patterns['message_id'].search(line)
+                    if msg_id_match and message_id.lower() in msg_id_match.group(1).lower():
+                        matches_criteria = True
+                        match_reasons.append(f"Message-ID: {msg_id_match.group(1)}")
+                        queue_ids.add(current_queue_id)
+                
+                # Check source email
+                if source_email:
+                    from_match = patterns['from'].search(line)
+                    if from_match and source_email.lower() in from_match.group(1).lower():
+                        matches_criteria = True
+                        match_reasons.append(f"From: {from_match.group(1)}")
+                        queue_ids.add(current_queue_id)
+                
+                # Check destination email
+                if dest_email:
+                    to_match = patterns['to'].search(line)
+                    if to_match and dest_email.lower() in to_match.group(1).lower():
+                        matches_criteria = True
+                        match_reasons.append(f"To: {to_match.group(1)}")
+                        queue_ids.add(current_queue_id)
+                
+                # Check if this queue ID was already identified as relevant
+                if current_queue_id in queue_ids or current_queue_id in related_queue_ids:
+                    matches_criteria = True
+                    if not match_reasons:
+                        match_reasons.append(f"Related to Queue-ID: {current_queue_id}")
+                
+                if matches_criteria:
+                    # Extract detailed information
+                    entry_info = {
+                        'line_number': line_number,
+                        'content': line,
+                        'timestamp': timestamp_match.group(1) if timestamp_match else '',
+                        'queue_id': current_queue_id,
+                        'match_reasons': match_reasons,
+                        'details': {}
+                    }
+                    
+                    # Extract additional details
+                    for key, pattern in patterns.items():
+                        if key not in ['timestamp', 'queue_id']:
+                            match = pattern.search(line)
+                            if match:
+                                entry_info['details'][key] = match.group(1)
+                    
+                    # Determine entry type
+                    if 'cleanup' in line:
+                        entry_info['type'] = 'message_accepted'
+                    elif 'qmgr' in line and 'from=' in line:
+                        entry_info['type'] = 'queue_manager'
+                    elif 'smtp' in line or 'lmtp' in line:
+                        entry_info['type'] = 'delivery_attempt'
+                    elif 'smtpd' in line:
+                        entry_info['type'] = 'smtp_session'
+                    elif 'bounce' in line:
+                        entry_info['type'] = 'bounce'
+                    elif 'error' in line.lower():
+                        entry_info['type'] = 'error'
+                    else:
+                        entry_info['type'] = 'other'
+                    
+                    matching_entries.append(entry_info)
+                    related_queue_ids.add(current_queue_id)
+        
+        # Group entries by queue ID for better organization
+        grouped_traces = defaultdict(list)
+        for entry in matching_entries:
+            grouped_traces[entry['queue_id']].append(entry)
+        
+        # Sort entries within each group by line number
+        for queue_id in grouped_traces:
+            grouped_traces[queue_id].sort(key=lambda x: x['line_number'])
+        
+        return jsonify({
+            'success': True,
+            'source_email': source_email,
+            'dest_email': dest_email,
+            'message_id': message_id,
+            'hours_back': hours_back,
+            'total_entries': len(matching_entries),
+            'queue_ids': list(queue_ids),
+            'grouped_traces': dict(grouped_traces),
+            'chronological_entries': sorted(matching_entries, key=lambda x: x['line_number']),
+            'file': log_file
+        })
+            
+    except FileNotFoundError:
+        return jsonify({'error': 'Log file not found'}), 404
+    except PermissionError:
+        return jsonify({'error': 'Permission denied reading log file'}), 403
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Use Waitress for production
     serve(app, host='0.0.0.0', port=8080)

@@ -65,6 +65,114 @@
     margin-bottom: 8px;
     border-left: 4px solid #2196f3;
 }
+
+/* Mail trace styling */
+.trace-header {
+    background-color: #e8f5e8;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    border-left: 4px solid #28a745;
+}
+
+.trace-queue-group {
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.trace-queue-header {
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: bold;
+    color: #495057;
+}
+
+.trace-entry {
+    padding: 6px 12px;
+    margin: 0;
+    display: block;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.trace-entry:last-child {
+    border-bottom: none;
+}
+
+.trace-entry.message_accepted {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.trace-entry.delivery_attempt {
+    background-color: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+}
+
+.trace-entry.queue_manager {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.trace-entry.smtp_session {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.trace-entry.bounce {
+    background-color: #f5c6cb;
+    border-left: 4px solid #721c24;
+}
+
+.trace-entry.error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    font-weight: bold;
+}
+
+.trace-entry.other {
+    background-color: #e2e3e5;
+    border-left: 4px solid #6c757d;
+}
+
+.trace-timestamp {
+    color: #6c757d;
+    font-weight: bold;
+    margin-right: 12px;
+    font-family: monospace;
+}
+
+.trace-type {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-right: 8px;
+}
+
+.trace-type.message_accepted { background-color: #28a745; color: white; }
+.trace-type.delivery_attempt { background-color: #17a2b8; color: white; }
+.trace-type.queue_manager { background-color: #ffc107; color: black; }
+.trace-type.smtp_session { background-color: #dc3545; color: white; }
+.trace-type.bounce { background-color: #721c24; color: white; }
+.trace-type.error { background-color: #dc3545; color: white; }
+.trace-type.other { background-color: #6c757d; color: white; }
+
+.trace-details {
+    font-size: 12px;
+    color: #495057;
+    margin-top: 4px;
+}
+
+.trace-match-reason {
+    color: #28a745;
+    font-weight: bold;
+    font-size: 11px;
+}
 </style>
 <div class="row">
     <div class="col-12">
@@ -114,6 +222,61 @@
                                                 <i class="fas fa-times"></i> Clear
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mail Trace Section -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-route"></i> Mail Trace</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label for="sourceEmail" class="form-label">Source Email:</label>
+                                        <input type="email" id="sourceEmail" class="form-control" placeholder="sender@domain.com" />
+                                        <small class="text-muted">Optional - sender address</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="destEmail" class="form-label">Destination Email:</label>
+                                        <input type="email" id="destEmail" class="form-control" placeholder="recipient@domain.com" />
+                                        <small class="text-muted">Optional - recipient address</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="messageId" class="form-label">Message ID:</label>
+                                        <input type="text" id="messageId" class="form-control" placeholder="message-id@server.com" />
+                                        <small class="text-muted">Optional - message identifier</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="hoursBack" class="form-label">Hours back:</label>
+                                        <select id="hoursBack" class="form-select">
+                                            <option value="1">1 hour</option>
+                                            <option value="6">6 hours</option>
+                                            <option value="24" selected>24 hours</option>
+                                            <option value="72">3 days</option>
+                                            <option value="168">1 week</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="d-flex gap-2">
+                                            <button id="traceBtn" class="btn btn-success">
+                                                <i class="fas fa-route"></i> Trace Mail
+                                            </button>
+                                            <button id="clearTraceBtn" class="btn btn-outline-secondary">
+                                                <i class="fas fa-times"></i> Clear Trace
+                                            </button>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">
+                                            <i class="fas fa-info-circle"></i> At least one field (source, destination, or message ID) is required
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -195,6 +358,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const caseSensitive = document.getElementById('caseSensitive');
     const searchBtn = document.getElementById('searchBtn');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
+    
+    // Mail trace elements
+    const sourceEmail = document.getElementById('sourceEmail');
+    const destEmail = document.getElementById('destEmail');
+    const messageId = document.getElementById('messageId');
+    const hoursBack = document.getElementById('hoursBack');
+    const traceBtn = document.getElementById('traceBtn');
+    const clearTraceBtn = document.getElementById('clearTraceBtn');
 
     function updateStatus(message, isError = false) {
         logStatus.innerHTML = `<small class="${isError ? 'text-danger' : 'text-muted'}">${message}</small>`;
@@ -394,6 +565,108 @@ Case sensitive: ${data.case_sensitive ? 'Yes' : 'No'}`;
         loadLogs(); // Return to normal log view
     }
 
+    function traceMail() {
+        const source = sourceEmail.value.trim();
+        const dest = destEmail.value.trim();
+        const msgId = messageId.value.trim();
+        const hours = hoursBack.value;
+        
+        if (!source && !dest && !msgId) {
+            alert('Please enter at least one search criteria (source, destination, or message ID)');
+            return;
+        }
+        
+        updateStatus('Tracing mail...');
+        
+        const params = new URLSearchParams();
+        if (source) params.append('source', source);
+        if (dest) params.append('destination', dest);
+        if (msgId) params.append('message_id', msgId);
+        params.append('hours_back', hours);
+        
+        fetch(`/api/logs/trace?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayTraceResults(data);
+                } else {
+                    logContent.innerHTML = formatLogLines('Trace error: ' + data.error, false);
+                    updateStatus('Trace error: ' + data.error, true);
+                }
+            })
+            .catch(error => {
+                logContent.innerHTML = formatLogLines('Network error: ' + error, false);
+                updateStatus('Network error: ' + error, true);
+            });
+    }
+
+    function displayTraceResults(data) {
+        if (data.total_entries === 0) {
+            const noResultsMsg = `No mail trace found for the specified criteria`;
+            logContent.innerHTML = formatLogLines(noResultsMsg, false);
+            logFilePath.textContent = data.file;
+            logInfo.style.display = 'block';
+            updateStatus('No mail trace found');
+            return;
+        }
+        
+        // Create trace header
+        let criteria = [];
+        if (data.source_email) criteria.push(`Source: ${data.source_email}`);
+        if (data.dest_email) criteria.push(`Destination: ${data.dest_email}`);
+        if (data.message_id) criteria.push(`Message-ID: ${data.message_id}`);
+        
+        const headerInfo = `Mail Trace Results (${data.total_entries} entries, ${data.queue_ids.length} queue IDs)
+Search criteria: ${criteria.join(', ')}
+Time range: Last ${data.hours_back} hours`;
+        
+        let htmlContent = `<div class="trace-header">${escapeHtml(headerInfo)}</div>`;
+        
+        // Display results grouped by queue ID
+        for (const [queueId, entries] of Object.entries(data.grouped_traces)) {
+            htmlContent += `<div class="trace-queue-group">`;
+            htmlContent += `<div class="trace-queue-header">Queue ID: ${escapeHtml(queueId)} (${entries.length} entries)</div>`;
+            
+            entries.forEach(entry => {
+                const typeTag = `<span class="trace-type ${entry.type}">${entry.type.replace('_', ' ')}</span>`;
+                const timestamp = `<span class="trace-timestamp">${escapeHtml(entry.timestamp)}</span>`;
+                const matchReasons = entry.match_reasons.map(r => `<span class="trace-match-reason">[${escapeHtml(r)}]</span>`).join(' ');
+                
+                let details = [];
+                if (entry.details.from) details.push(`From: ${entry.details.from}`);
+                if (entry.details.to) details.push(`To: ${entry.details.to}`);
+                if (entry.details.status) details.push(`Status: ${entry.details.status}`);
+                if (entry.details.delay) details.push(`Delay: ${entry.details.delay}s`);
+                if (entry.details.relay) details.push(`Relay: ${entry.details.relay}`);
+                if (entry.details.dsn) details.push(`DSN: ${entry.details.dsn}`);
+                
+                const detailsHtml = details.length > 0 ? `<div class="trace-details">${escapeHtml(details.join(' | '))}</div>` : '';
+                
+                htmlContent += `<div class="trace-entry ${entry.type}">`;
+                htmlContent += `${timestamp}${typeTag}${matchReasons}<br>`;
+                htmlContent += `<small>Line ${entry.line_number}: ${escapeHtml(entry.content)}</small>`;
+                htmlContent += detailsHtml;
+                htmlContent += `</div>`;
+            });
+            
+            htmlContent += `</div>`;
+        }
+        
+        logContent.innerHTML = htmlContent;
+        logFilePath.textContent = data.file;
+        logInfo.style.display = 'block';
+        updateStatus(`Found ${data.total_entries} trace entries across ${data.queue_ids.length} queue IDs`);
+        scrollToBottom();
+    }
+
+    function clearTrace() {
+        sourceEmail.value = '';
+        destEmail.value = '';
+        messageId.value = '';
+        hoursBack.value = '24';
+        loadLogs(); // Return to normal log view
+    }
+
     // Event listeners
     refreshBtn.addEventListener('click', loadLogs);
     followBtn.addEventListener('click', startFollowing);
@@ -409,6 +682,19 @@ Case sensitive: ${data.case_sensitive ? 'Yes' : 'No'}`;
         if (e.key === 'Enter') {
             searchLogs();
         }
+    });
+    
+    // Mail trace event listeners
+    traceBtn.addEventListener('click', traceMail);
+    clearTraceBtn.addEventListener('click', clearTrace);
+    
+    // Enter key to trace mail
+    [sourceEmail, destEmail, messageId].forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                traceMail();
+            }
+        });
     });
     
     // Auto-refresh when lines change during following
