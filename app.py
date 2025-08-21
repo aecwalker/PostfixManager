@@ -563,6 +563,8 @@ def trace_mail():
                         entry_info['type'] = 'message_accepted'
                     elif 'qmgr' in line and 'from=' in line:
                         entry_info['type'] = 'queue_manager'
+                    elif ('smtp' in line or 'lmtp' in line) and 'status=sent' in line:
+                        entry_info['type'] = 'delivery_sent'
                     elif 'smtp' in line or 'lmtp' in line:
                         entry_info['type'] = 'delivery_attempt'
                     elif 'smtpd' in line:

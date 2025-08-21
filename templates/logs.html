@@ -111,6 +111,11 @@
     border-left: 4px solid #17a2b8;
 }
 
+.trace-entry.delivery_sent {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
 .trace-entry.queue_manager {
     background-color: #fff3cd;
     border-left: 4px solid #ffc107;
@@ -156,6 +161,7 @@
 
 .trace-type.message_accepted { background-color: #28a745; color: white; }
 .trace-type.delivery_attempt { background-color: #17a2b8; color: white; }
+.trace-type.delivery_sent { background-color: #28a745; color: white; }
 .trace-type.queue_manager { background-color: #ffc107; color: black; }
 .trace-type.smtp_session { background-color: #dc3545; color: white; }
 .trace-type.bounce { background-color: #721c24; color: white; }
@@ -628,19 +634,45 @@ Time range: Last ${data.hours_back} hours`;
             htmlContent += `<div class="trace-queue-header">Queue ID: ${escapeHtml(queueId)} (${entries.length} entries)</div>`;
             
             entries.forEach(entry => {
-                const typeTag = `<span class="trace-type ${entry.type}">${entry.type.replace('_', ' ')}</span>`;
+                // Format type display name
+                let typeDisplay = entry.type.replace('_', ' ');
+                if (entry.type === 'delivery_sent') {
+                    typeDisplay = 'SENT';
+                } else {
+                    typeDisplay = typeDisplay.toUpperCase();
+                }
+                
+                const typeTag = `<span class="trace-type ${entry.type}">${typeDisplay}</span>`;
                 const timestamp = `<span class="trace-timestamp">${escapeHtml(entry.timestamp)}</span>`;
                 const matchReasons = entry.match_reasons.map(r => `<span class="trace-match-reason">[${escapeHtml(r)}]</span>`).join(' ');
                 
-                let details = [];
-                if (entry.details.from) details.push(`From: ${entry.details.from}`);
-                if (entry.details.to) details.push(`To: ${entry.details.to}`);
-                if (entry.details.status) details.push(`Status: ${entry.details.status}`);
-                if (entry.details.delay) details.push(`Delay: ${entry.details.delay}s`);
-                if (entry.details.relay) details.push(`Relay: ${entry.details.relay}`);
-                if (entry.details.dsn) details.push(`DSN: ${entry.details.dsn}`);
-                
-                const detailsHtml = details.length > 0 ? `<div class="trace-details">${escapeHtml(details.join(' | '))}</div>` : '';
+                // For successful deliveries, format details in the requested style
+                let detailsHtml = '';
+                if (entry.type === 'delivery_sent') {
+                    let details = [];
+                    if (entry.details.to) details.push(`To: ${entry.details.to}`);
+                    if (entry.details.status) details.push(`Status: ${entry.details.status}`);
+                    if (entry.details.delay) details.push(`Delay: ${entry.details.delay}s`);
+                    if (entry.details.relay) details.push(`Relay: ${entry.details.relay}`);
+                    if (entry.details.dsn) details.push(`DSN: ${entry.details.dsn}`);
+                    
+                    if (details.length > 0) {
+                        detailsHtml = `<div class="trace-details" style="color: #155724; font-weight: bold;">${escapeHtml(details.join(' | '))}</div>`;
+                    }
+                } else {
+                    // Standard details formatting for other entry types
+                    let details = [];
+                    if (entry.details.from) details.push(`From: ${entry.details.from}`);
+                    if (entry.details.to) details.push(`To: ${entry.details.to}`);
+                    if (entry.details.status) details.push(`Status: ${entry.details.status}`);
+                    if (entry.details.delay) details.push(`Delay: ${entry.details.delay}s`);
+                    if (entry.details.relay) details.push(`Relay: ${entry.details.relay}`);
+                    if (entry.details.dsn) details.push(`DSN: ${entry.details.dsn}`);
+                    
+                    if (details.length > 0) {
+                        detailsHtml = `<div class="trace-details">${escapeHtml(details.join(' | '))}</div>`;
+                    }
+                }
                 
                 htmlContent += `<div class="trace-entry ${entry.type}">`;
                 htmlContent += `${timestamp}${typeTag}${matchReasons}<br>`;
