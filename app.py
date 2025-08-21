@@ -473,21 +473,19 @@ def trace_mail():
         
         # Regex patterns for Postfix log parsing
         patterns = {
-            'message_id': re.compile(r'message-id=<([^>]+)>'),
+            'message_id': re.compile(r'message-id=<([^>]+)>', re.IGNORECASE),
             'queue_id': re.compile(r'postfix/[^:]+\[[\d]+\]: ([A-F0-9]+):'),
-            'from': re.compile(r'from=<([^>]*)>'),
-            'to': re.compile(r'to=<([^>]*)>'),
-            'status': re.compile(r'status=(\w+)'),
-            'delay': re.compile(r'delay=([\d.]+)'),
-            'dsn': re.compile(r'dsn=([\d.]+)'),
-            'relay': re.compile(r'relay=([^,]+)'),
-            'timestamp': re.compile(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})'),
+            'from': re.compile(r'from=<([^>]*)>', re.IGNORECASE),
+            'to': re.compile(r'to=<([^>]*)>', re.IGNORECASE),
+            'status': re.compile(r'status=(\w+)', re.IGNORECASE),
+            'delay': re.compile(r'delay=([\d.]+)', re.IGNORECASE),
+            'dsn': re.compile(r'dsn=([\d.]+)', re.IGNORECASE),
+            'relay': re.compile(r'relay=([^,\s]+)', re.IGNORECASE),
+            'timestamp': re.compile(r'(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})'),
             # Additional patterns for rejections and NOQUEUE entries
-            'rejection_from': re.compile(r'from=<([^>]*)>'),
-            'rejection_to': re.compile(r'to=<([^>]*)>'),
-            'rejection_email': re.compile(r'<([^@>]+@[^@>]+\.[^@>]+)>'),
-            'noqueue': re.compile(r'NOQUEUE:'),
-            'reject': re.compile(r'reject:'),
+            'rejection_email': re.compile(r'<([^@\s>]+@[^@\s>]+\.[^@\s>]+)>'),
+            'noqueue': re.compile(r'NOQUEUE:', re.IGNORECASE),
+            'reject': re.compile(r'reject:', re.IGNORECASE),
         }
         
         matching_entries = []
@@ -561,21 +559,30 @@ def trace_mail():
                 
                 if matches_criteria:
                     # Extract detailed information
+                    # Extract timestamp properly handling both formats
+                    timestamp_str = ''
+                    if timestamp_match:
+                        timestamp_str = timestamp_match.group(1)
+                    
                     entry_info = {
                         'line_number': line_number,
                         'content': line,
-                        'timestamp': timestamp_match.group(1) if timestamp_match else '',
+                        'timestamp': timestamp_str,
                         'queue_id': current_queue_id,
                         'match_reasons': match_reasons,
                         'details': {}
                     }
                     
-                    # Extract additional details
+                    # Extract additional details with error handling
                     for key, pattern in patterns.items():
-                        if key not in ['timestamp', 'queue_id']:
-                            match = pattern.search(line)
-                            if match:
-                                entry_info['details'][key] = match.group(1)
+                        if key not in ['timestamp', 'queue_id', 'noqueue', 'reject']:
+                            try:
+                                match = pattern.search(line)
+                                if match and match.group(1):
+                                    entry_info['details'][key] = match.group(1)
+                            except (IndexError, AttributeError):
+                                # Skip patterns that don't match or don't have the expected group
+                                continue
                     
                     # Determine entry type
                     if 'NOQUEUE: reject' in line:
