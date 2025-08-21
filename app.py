@@ -526,26 +526,28 @@ def trace_mail():
                         match_reasons.append(f"Message-ID: {msg_id_match.group(1)}")
                         queue_ids.add(current_queue_id)
                 
-                # Check source email
+                # Check source email (exact match for precision)
                 if source_email:
                     from_match = patterns['from'].search(line)
-                    if from_match and source_email.lower() in from_match.group(1).lower():
+                    if from_match and source_email.lower() == from_match.group(1).lower():
                         matches_criteria = True
                         match_reasons.append(f"From: {from_match.group(1)}")
                         queue_ids.add(current_queue_id)
                 
-                # Check destination email (including in rejection messages)
+                # Check destination email (exact match for precision)
                 if dest_email:
                     to_match = patterns['to'].search(line)
-                    if to_match and dest_email.lower() in to_match.group(1).lower():
+                    if to_match and dest_email.lower() == to_match.group(1).lower():
                         matches_criteria = True
                         match_reasons.append(f"To: {to_match.group(1)}")
                         queue_ids.add(current_queue_id)
                     else:
                         # Also check for emails in rejection messages (might not have to= format)
+                        # Use exact match to avoid false positives
                         email_matches = patterns['rejection_email'].findall(line)
                         for email in email_matches:
-                            if dest_email.lower() in email.lower():
+                            # Only exact match to prevent showing rejections for other users
+                            if dest_email.lower() == email.lower():
                                 matches_criteria = True
                                 match_reasons.append(f"Email in rejection: {email}")
                                 queue_ids.add(current_queue_id)
