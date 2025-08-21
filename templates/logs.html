@@ -1,6 +1,71 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+/* Log display styling */
+#logContent {
+    line-height: 1.4;
+    padding: 0;
+    margin: 0;
+}
+
+/* Alternating row colors */
+.log-line {
+    padding: 2px 8px;
+    margin: 0;
+    display: block;
+    border: none;
+}
+
+.log-line:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+.log-line:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+/* Search term highlighting */
+.search-highlight {
+    background-color: #ffeb3b;
+    color: #000;
+    font-weight: bold;
+    padding: 1px 2px;
+    border-radius: 2px;
+}
+
+/* Search results specific styling */
+.search-result-line {
+    padding: 4px 8px;
+    margin: 0;
+    display: block;
+    border-left: 3px solid #007bff;
+}
+
+.search-result-line:nth-child(odd) {
+    background-color: #f8f9ff;
+}
+
+.search-result-line:nth-child(even) {
+    background-color: #ffffff;
+}
+
+/* Line number styling in search results */
+.line-number {
+    color: #6c757d;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+/* Search header styling */
+.search-header {
+    background-color: #e3f2fd;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border-left: 4px solid #2196f3;
+}
+</style>
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -93,8 +158,8 @@
                 </div>
 
                 <!-- Log Content -->
-                <div id="logContainer" class="border rounded p-3" style="height: 500px; overflow-y: auto; background-color: #f8f9fa;">
-                    <pre id="logContent" class="mb-0" style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px;"></pre>
+                <div id="logContainer" class="border rounded" style="height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                    <div id="logContent" class="mb-0" style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px;"></div>
                 </div>
 
                 <!-- Status -->
@@ -139,6 +204,42 @@ document.addEventListener('DOMContentLoaded', function() {
         logContainer.scrollTop = logContainer.scrollHeight;
     }
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function highlightSearchTerm(text, searchTerm, caseSensitive = false) {
+        if (!searchTerm) return escapeHtml(text);
+        
+        const escaped = escapeHtml(text);
+        const flags = caseSensitive ? 'g' : 'gi';
+        const regex = new RegExp(escapeHtml(searchTerm).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+        
+        return escaped.replace(regex, match => `<span class="search-highlight">${match}</span>`);
+    }
+
+    function formatLogLines(content, isSearchResult = false, searchTerm = '', caseSensitive = false) {
+        if (!content) return '';
+        
+        const lines = content.split('\n');
+        const lineClass = isSearchResult ? 'search-result-line' : 'log-line';
+        
+        return lines.map(line => {
+            if (line.trim() === '') return '<div class="' + lineClass + '">&nbsp;</div>';
+            
+            let formattedLine = line;
+            if (isSearchResult && searchTerm) {
+                formattedLine = highlightSearchTerm(line, searchTerm, caseSensitive);
+            } else {
+                formattedLine = escapeHtml(line);
+            }
+            
+            return `<div class="${lineClass}">${formattedLine}</div>`;
+        }).join('');
+    }
+
     function loadLogs() {
         const lines = logLines.value;
         
@@ -148,18 +249,19 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    logContent.textContent = data.content || 'No log entries found';
+                    const content = data.content || 'No log entries found';
+                    logContent.innerHTML = formatLogLines(content, false);
                     logFilePath.textContent = data.file;
                     logInfo.style.display = 'block';
                     updateStatus(`Loaded ${lines} lines from ${data.file}`);
                     scrollToBottom();
                 } else {
-                    logContent.textContent = 'Error loading logs: ' + data.error;
+                    logContent.innerHTML = formatLogLines('Error loading logs: ' + data.error, false);
                     updateStatus('Error loading logs: ' + data.error, true);
                 }
             })
             .catch(error => {
-                logContent.textContent = 'Network error: ' + error;
+                logContent.innerHTML = formatLogLines('Network error: ' + error, false);
                 updateStatus('Network error: ' + error, true);
             });
     }
@@ -183,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     if (data.success) {
                         if (data.content) {
-                            logContent.textContent = data.content;
+                            logContent.innerHTML = formatLogLines(data.content, false);
                             scrollToBottom();
                         }
                         updateStatus(`Following ${data.file} (auto-refresh every 3s)`);
@@ -213,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearLogs() {
-        logContent.textContent = '';
+        logContent.innerHTML = '';
         logInfo.style.display = 'none';
         updateStatus('Log display cleared');
     }
@@ -242,39 +344,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     displaySearchResults(data);
                 } else {
-                    logContent.textContent = 'Search error: ' + data.error;
+                    logContent.innerHTML = formatLogLines('Search error: ' + data.error, false);
                     updateStatus('Search error: ' + data.error, true);
                 }
             })
             .catch(error => {
-                logContent.textContent = 'Network error: ' + error;
+                logContent.innerHTML = formatLogLines('Network error: ' + error, false);
                 updateStatus('Network error: ' + error, true);
             });
     }
 
     function displaySearchResults(data) {
         if (data.matches.length === 0) {
-            logContent.textContent = `No matches found for "${data.search_term}"`;
+            const noResultsMsg = `No matches found for "${data.search_term}"`;
+            logContent.innerHTML = formatLogLines(noResultsMsg, false);
             logFilePath.textContent = data.file;
             logInfo.style.display = 'block';
             updateStatus(`No matches found for "${data.search_term}"`);
             return;
         }
         
-        // Format search results with line numbers
-        let resultsText = `Search Results for "${data.search_term}" (${data.total_matches} matches)\n`;
-        resultsText += `Case sensitive: ${data.case_sensitive ? 'Yes' : 'No'}\n`;
-        resultsText += '='.repeat(80) + '\n\n';
+        // Create search header
+        const headerInfo = `Search Results for "${data.search_term}" (${data.total_matches} matches)
+Case sensitive: ${data.case_sensitive ? 'Yes' : 'No'}`;
         
+        let htmlContent = `<div class="search-header">${escapeHtml(headerInfo)}</div>`;
+        
+        // Add search results with highlighting
         data.matches.forEach(match => {
-            resultsText += `Line ${match.line_number}: ${match.content}\n`;
+            const lineNumberSpan = `<span class="line-number">Line ${match.line_number}:</span>`;
+            const highlightedContent = highlightSearchTerm(match.content, data.search_term, data.case_sensitive);
+            htmlContent += `<div class="search-result-line">${lineNumberSpan}${highlightedContent}</div>`;
         });
         
         if (data.total_matches >= data.max_results) {
-            resultsText += `\n... (showing first ${data.max_results} results)`;
+            htmlContent += `<div class="search-result-line"><em>... (showing first ${data.max_results} results)</em></div>`;
         }
         
-        logContent.textContent = resultsText;
+        logContent.innerHTML = htmlContent;
         logFilePath.textContent = data.file;
         logInfo.style.display = 'block';
         updateStatus(`Found ${data.total_matches} matches for "${data.search_term}"`);
