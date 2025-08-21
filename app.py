@@ -331,6 +331,74 @@ def reload_postfix():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/logs')
+@login_required
+def logs():
+    """Display log viewer page"""
+    # Check if user must change password
+    if current_user.must_change_password:
+        return redirect(url_for('change_password'))
+    return render_template('logs.html')
+
+@app.route('/api/logs')
+@login_required
+def get_logs():
+    """Get mail.log file contents"""
+    try:
+        log_file = '/var/log/mail.log'
+        lines = request.args.get('lines', '50')
+        
+        # Use sudo tail to read log file
+        import subprocess
+        result = subprocess.run(['sudo', 'tail', '-n', lines, log_file], 
+                              capture_output=True, text=True, timeout=10)
+        
+        if result.returncode == 0:
+            return jsonify({
+                'success': True, 
+                'content': result.stdout,
+                'file': log_file
+            })
+        else:
+            return jsonify({'error': f'Failed to read log file: {result.stderr}'}), 500
+            
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Log read timeout'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/logs/follow')
+@login_required
+def follow_logs():
+    """Stream mail.log file updates"""
+    try:
+        log_file = '/var/log/mail.log'
+        lines = request.args.get('lines', '20')
+        
+        # Use sudo tail -f to follow log file
+        import subprocess
+        result = subprocess.run(['sudo', 'tail', '-f', '-n', lines, log_file], 
+                              capture_output=True, text=True, timeout=5)
+        
+        if result.returncode == 0:
+            return jsonify({
+                'success': True, 
+                'content': result.stdout,
+                'file': log_file
+            })
+        else:
+            return jsonify({'error': f'Failed to follow log file: {result.stderr}'}), 500
+            
+    except subprocess.TimeoutExpired:
+        # Timeout expected for tail -f, return what we got
+        return jsonify({
+            'success': True, 
+            'content': result.stdout if 'result' in locals() else '',
+            'file': log_file
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Use Waitress for production
     serve(app, host='0.0.0.0', port=8080)

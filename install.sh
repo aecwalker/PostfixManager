@@ -175,9 +175,14 @@ install_systemd_service() {
 }
 
 setup_sudo_permissions() {
-    log_info "Setting up sudo permissions for Postfix reload..."
+    log_info "Setting up sudo permissions for Postfix reload and log access..."
     
-    echo "$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload postfix" > "/etc/sudoers.d/$SERVICE_USER"
+    cat > "/etc/sudoers.d/$SERVICE_USER" << EOF
+# PostfixManager sudo permissions
+$SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload postfix
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/tail -n * /var/log/mail.log
+$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/tail -f -n * /var/log/mail.log
+EOF
     chmod 440 "/etc/sudoers.d/$SERVICE_USER"
     
     log_success "Sudo permissions configured"

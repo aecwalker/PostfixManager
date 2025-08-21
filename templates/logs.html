@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-file-alt"></i> Log Viewer</h5>
+            </div>
+            <div class="card-body">
+                <!-- Controls -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="logLines" class="form-label">Lines to show:</label>
+                        <select id="logLines" class="form-select">
+                            <option value="20">20</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <div class="col-md-9">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button id="refreshBtn" class="btn btn-primary">
+                                <i class="fas fa-refresh"></i> Refresh
+                            </button>
+                            <button id="followBtn" class="btn btn-success">
+                                <i class="fas fa-play"></i> Start Following
+                            </button>
+                            <button id="stopFollowBtn" class="btn btn-danger" style="display: none;">
+                                <i class="fas fa-stop"></i> Stop Following
+                            </button>
+                            <button id="clearBtn" class="btn btn-secondary">
+                                <i class="fas fa-eraser"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log File Info -->
+                <div id="logInfo" class="alert alert-info" style="display: none;">
+                    <strong>File:</strong> <span id="logFilePath"></span>
+                </div>
+
+                <!-- Log Content -->
+                <div id="logContainer" class="border rounded p-3" style="height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                    <pre id="logContent" class="mb-0" style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px;"></pre>
+                </div>
+
+                <!-- Status -->
+                <div id="logStatus" class="mt-2">
+                    <small class="text-muted">Select a log type and click refresh to view logs</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let followInterval = null;
+let isFollowing = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const logLines = document.getElementById('logLines');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const followBtn = document.getElementById('followBtn');
+    const stopFollowBtn = document.getElementById('stopFollowBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const logContent = document.getElementById('logContent');
+    const logInfo = document.getElementById('logInfo');
+    const logFilePath = document.getElementById('logFilePath');
+    const logStatus = document.getElementById('logStatus');
+    const logContainer = document.getElementById('logContainer');
+
+    function updateStatus(message, isError = false) {
+        logStatus.innerHTML = `<small class="${isError ? 'text-danger' : 'text-muted'}">${message}</small>`;
+    }
+
+    function scrollToBottom() {
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function loadLogs() {
+        const lines = logLines.value;
+        
+        updateStatus('Loading logs...');
+        
+        fetch(`/api/logs?lines=${lines}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    logContent.textContent = data.content || 'No log entries found';
+                    logFilePath.textContent = data.file;
+                    logInfo.style.display = 'block';
+                    updateStatus(`Loaded ${lines} lines from ${data.file}`);
+                    scrollToBottom();
+                } else {
+                    logContent.textContent = 'Error loading logs: ' + data.error;
+                    updateStatus('Error loading logs: ' + data.error, true);
+                }
+            })
+            .catch(error => {
+                logContent.textContent = 'Network error: ' + error;
+                updateStatus('Network error: ' + error, true);
+            });
+    }
+
+    function startFollowing() {
+        if (isFollowing) return;
+        
+        isFollowing = true;
+        followBtn.style.display = 'none';
+        stopFollowBtn.style.display = 'inline-block';
+        
+        // Initial load
+        loadLogs();
+        
+        // Set up polling for new log entries
+        followInterval = setInterval(() => {
+            const lines = logLines.value;
+            
+            fetch(`/api/logs/follow?lines=${lines}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.content) {
+                            logContent.textContent = data.content;
+                            scrollToBottom();
+                        }
+                        updateStatus(`Following ${data.file} (auto-refresh every 3s)`);
+                    }
+                })
+                .catch(error => {
+                    updateStatus('Follow error: ' + error, true);
+                });
+        }, 3000);
+        
+        updateStatus('Started following logs...');
+    }
+
+    function stopFollowing() {
+        if (!isFollowing) return;
+        
+        isFollowing = false;
+        followBtn.style.display = 'inline-block';
+        stopFollowBtn.style.display = 'none';
+        
+        if (followInterval) {
+            clearInterval(followInterval);
+            followInterval = null;
+        }
+        
+        updateStatus('Stopped following logs');
+    }
+
+    function clearLogs() {
+        logContent.textContent = '';
+        logInfo.style.display = 'none';
+        updateStatus('Log display cleared');
+    }
+
+    // Event listeners
+    refreshBtn.addEventListener('click', loadLogs);
+    followBtn.addEventListener('click', startFollowing);
+    stopFollowBtn.addEventListener('click', stopFollowing);
+    clearBtn.addEventListener('click', clearLogs);
+    
+    // Auto-refresh when lines change during following
+    logLines.addEventListener('change', function() {
+        if (isFollowing) {
+            stopFollowing();
+            setTimeout(startFollowing, 500);
+        }
+    });
+
+    // Load initial logs
+    loadLogs();
+});
+</script>
+{% endblock %}

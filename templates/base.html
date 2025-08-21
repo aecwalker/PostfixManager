@@ -20,6 +20,11 @@
                 <ul class="navbar-nav ms-auto">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
+                        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('logs') }}">
+                            <i class="fas fa-file-alt"></i> View Logs
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <button class="btn btn-outline-light btn-sm me-2" onclick="reloadPostfix()">
                             <i class="fas fa-sync"></i> Reload Postfix
                         </button>
