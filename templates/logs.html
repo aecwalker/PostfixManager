@@ -131,6 +131,12 @@
     border-left: 4px solid #721c24;
 }
 
+.trace-entry.rejection {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    font-weight: bold;
+}
+
 .trace-entry.error {
     background-color: #f8d7da;
     border-left: 4px solid #dc3545;
@@ -165,6 +171,7 @@
 .trace-type.queue_manager { background-color: #ffc107; color: black; }
 .trace-type.smtp_session { background-color: #dc3545; color: white; }
 .trace-type.bounce { background-color: #721c24; color: white; }
+.trace-type.rejection { background-color: #dc3545; color: white; }
 .trace-type.error { background-color: #dc3545; color: white; }
 .trace-type.other { background-color: #6c757d; color: white; }
 
@@ -638,6 +645,8 @@ Time range: Last ${data.hours_back} hours`;
                 let typeDisplay = entry.type.replace('_', ' ');
                 if (entry.type === 'delivery_sent') {
                     typeDisplay = 'SENT';
+                } else if (entry.type === 'rejection') {
+                    typeDisplay = 'REJECTED';
                 } else {
                     typeDisplay = typeDisplay.toUpperCase();
                 }

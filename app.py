@@ -482,6 +482,12 @@ def trace_mail():
             'dsn': re.compile(r'dsn=([\d.]+)'),
             'relay': re.compile(r'relay=([^,]+)'),
             'timestamp': re.compile(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})'),
+            # Additional patterns for rejections and NOQUEUE entries
+            'rejection_from': re.compile(r'from=<([^>]*)>'),
+            'rejection_to': re.compile(r'to=<([^>]*)>'),
+            'rejection_email': re.compile(r'<([^@>]+@[^@>]+\.[^@>]+)>'),
+            'noqueue': re.compile(r'NOQUEUE:'),
+            'reject': re.compile(r'reject:'),
         }
         
         matching_entries = []
@@ -500,11 +506,15 @@ def trace_mail():
                 # Extract basic info
                 timestamp_match = patterns['timestamp'].search(line)
                 queue_id_match = patterns['queue_id'].search(line)
+                noqueue_match = patterns['noqueue'].search(line)
                 
-                if not queue_id_match:
+                # Handle both regular queue entries and NOQUEUE entries
+                if queue_id_match:
+                    current_queue_id = queue_id_match.group(1)
+                elif noqueue_match:
+                    current_queue_id = 'NOQUEUE'
+                else:
                     continue
-                
-                current_queue_id = queue_id_match.group(1)
                 
                 # Check if this line matches our search criteria
                 matches_criteria = False
@@ -526,13 +536,22 @@ def trace_mail():
                         match_reasons.append(f"From: {from_match.group(1)}")
                         queue_ids.add(current_queue_id)
                 
-                # Check destination email
+                # Check destination email (including in rejection messages)
                 if dest_email:
                     to_match = patterns['to'].search(line)
                     if to_match and dest_email.lower() in to_match.group(1).lower():
                         matches_criteria = True
                         match_reasons.append(f"To: {to_match.group(1)}")
                         queue_ids.add(current_queue_id)
+                    else:
+                        # Also check for emails in rejection messages (might not have to= format)
+                        email_matches = patterns['rejection_email'].findall(line)
+                        for email in email_matches:
+                            if dest_email.lower() in email.lower():
+                                matches_criteria = True
+                                match_reasons.append(f"Email in rejection: {email}")
+                                queue_ids.add(current_queue_id)
+                                break
                 
                 # Check if this queue ID was already identified as relevant
                 if current_queue_id in queue_ids or current_queue_id in related_queue_ids:
@@ -559,7 +578,9 @@ def trace_mail():
                                 entry_info['details'][key] = match.group(1)
                     
                     # Determine entry type
-                    if 'cleanup' in line:
+                    if 'NOQUEUE: reject' in line:
+                        entry_info['type'] = 'rejection'
+                    elif 'cleanup' in line:
                         entry_info['type'] = 'message_accepted'
                     elif 'qmgr' in line and 'from=' in line:
                         entry_info['type'] = 'queue_manager'
