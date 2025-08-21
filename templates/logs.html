@@ -8,6 +8,54 @@
                 <h5><i class="fas fa-file-alt"></i> Log Viewer</h5>
             </div>
             <div class="card-body">
+                <!-- Search Section -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-search"></i> Search Logs</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="searchTerm" class="form-label">Search for:</label>
+                                        <input type="text" id="searchTerm" class="form-control" placeholder="Enter search term..." />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="maxResults" class="form-label">Max results:</label>
+                                        <select id="maxResults" class="form-select">
+                                            <option value="50">50</option>
+                                            <option value="100" selected>100</option>
+                                            <option value="200">200</option>
+                                            <option value="500">500</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">&nbsp;</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="caseSensitive">
+                                            <label class="form-check-label" for="caseSensitive">
+                                                Case sensitive
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">&nbsp;</label>
+                                        <div class="d-flex gap-2">
+                                            <button id="searchBtn" class="btn btn-info">
+                                                <i class="fas fa-search"></i> Search
+                                            </button>
+                                            <button id="clearSearchBtn" class="btn btn-outline-secondary">
+                                                <i class="fas fa-times"></i> Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Controls -->
                 <div class="row mb-3">
                     <div class="col-md-3">
@@ -75,6 +123,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const logFilePath = document.getElementById('logFilePath');
     const logStatus = document.getElementById('logStatus');
     const logContainer = document.getElementById('logContainer');
+    
+    // Search elements
+    const searchTerm = document.getElementById('searchTerm');
+    const maxResults = document.getElementById('maxResults');
+    const caseSensitive = document.getElementById('caseSensitive');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
 
     function updateStatus(message, isError = false) {
         logStatus.innerHTML = `<small class="${isError ? 'text-danger' : 'text-muted'}">${message}</small>`;
@@ -163,11 +218,91 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStatus('Log display cleared');
     }
 
+    function searchLogs() {
+        const query = searchTerm.value.trim();
+        if (!query) {
+            alert('Please enter a search term');
+            return;
+        }
+        
+        const maxRes = maxResults.value;
+        const caseSens = caseSensitive.checked;
+        
+        updateStatus('Searching logs...');
+        
+        const params = new URLSearchParams({
+            q: query,
+            max_results: maxRes,
+            case_sensitive: caseSens.toString()
+        });
+        
+        fetch(`/api/logs/search?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displaySearchResults(data);
+                } else {
+                    logContent.textContent = 'Search error: ' + data.error;
+                    updateStatus('Search error: ' + data.error, true);
+                }
+            })
+            .catch(error => {
+                logContent.textContent = 'Network error: ' + error;
+                updateStatus('Network error: ' + error, true);
+            });
+    }
+
+    function displaySearchResults(data) {
+        if (data.matches.length === 0) {
+            logContent.textContent = `No matches found for "${data.search_term}"`;
+            logFilePath.textContent = data.file;
+            logInfo.style.display = 'block';
+            updateStatus(`No matches found for "${data.search_term}"`);
+            return;
+        }
+        
+        // Format search results with line numbers
+        let resultsText = `Search Results for "${data.search_term}" (${data.total_matches} matches)\n`;
+        resultsText += `Case sensitive: ${data.case_sensitive ? 'Yes' : 'No'}\n`;
+        resultsText += '='.repeat(80) + '\n\n';
+        
+        data.matches.forEach(match => {
+            resultsText += `Line ${match.line_number}: ${match.content}\n`;
+        });
+        
+        if (data.total_matches >= data.max_results) {
+            resultsText += `\n... (showing first ${data.max_results} results)`;
+        }
+        
+        logContent.textContent = resultsText;
+        logFilePath.textContent = data.file;
+        logInfo.style.display = 'block';
+        updateStatus(`Found ${data.total_matches} matches for "${data.search_term}"`);
+        scrollToBottom();
+    }
+
+    function clearSearch() {
+        searchTerm.value = '';
+        caseSensitive.checked = false;
+        loadLogs(); // Return to normal log view
+    }
+
     // Event listeners
     refreshBtn.addEventListener('click', loadLogs);
     followBtn.addEventListener('click', startFollowing);
     stopFollowBtn.addEventListener('click', stopFollowing);
     clearBtn.addEventListener('click', clearLogs);
+    
+    // Search event listeners
+    searchBtn.addEventListener('click', searchLogs);
+    clearSearchBtn.addEventListener('click', clearSearch);
+    
+    // Enter key to search
+    searchTerm.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchLogs();
+        }
+    });
     
     // Auto-refresh when lines change during following
     logLines.addEventListener('change', function() {

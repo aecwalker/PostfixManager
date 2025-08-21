@@ -396,6 +396,58 @@ def follow_logs():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/logs/search')
+@login_required
+def search_logs():
+    """Search mail.log file for specific terms"""
+    try:
+        log_file = '/var/log/mail.log'
+        search_term = request.args.get('q', '').strip()
+        max_results = int(request.args.get('max_results', '100'))
+        case_sensitive = request.args.get('case_sensitive', 'false').lower() == 'true'
+        
+        if not search_term:
+            return jsonify({'error': 'Search term is required'}), 400
+        
+        matching_lines = []
+        line_number = 0
+        
+        # Read log file and search for matching lines
+        with open(log_file, 'r') as f:
+            for line in f:
+                line_number += 1
+                
+                # Perform search (case sensitive or insensitive)
+                search_line = line if case_sensitive else line.lower()
+                search_query = search_term if case_sensitive else search_term.lower()
+                
+                if search_query in search_line:
+                    matching_lines.append({
+                        'line_number': line_number,
+                        'content': line.rstrip('\n')
+                    })
+                    
+                    # Limit results to prevent huge responses
+                    if len(matching_lines) >= max_results:
+                        break
+        
+        return jsonify({
+            'success': True,
+            'search_term': search_term,
+            'case_sensitive': case_sensitive,
+            'total_matches': len(matching_lines),
+            'max_results': max_results,
+            'matches': matching_lines,
+            'file': log_file
+        })
+            
+    except FileNotFoundError:
+        return jsonify({'error': 'Log file not found'}), 404
+    except PermissionError:
+        return jsonify({'error': 'Permission denied reading log file'}), 403
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Use Waitress for production
     serve(app, host='0.0.0.0', port=8080)
