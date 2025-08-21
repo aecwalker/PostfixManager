@@ -323,7 +323,7 @@ def delete_config_line(config_type):
 def reload_postfix():
     """Reload Postfix configuration"""
     try:
-        result = os.system('systemctl reload postfix')
+        result = os.system('sudo systemctl reload postfix')
         if result == 0:
             return jsonify({'success': True, 'message': 'Postfix reloaded successfully'})
         else:
