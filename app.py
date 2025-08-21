@@ -346,56 +346,53 @@ def get_logs():
     """Get mail.log file contents"""
     try:
         log_file = '/var/log/mail.log'
-        lines = request.args.get('lines', '50')
+        lines = int(request.args.get('lines', '50'))
         
-        # Use sudo tail to read log file
-        import subprocess
-        result = subprocess.run(['sudo', 'tail', '-n', lines, log_file], 
-                              capture_output=True, text=True, timeout=10)
+        # Read log file directly
+        with open(log_file, 'r') as f:
+            # Read all lines and get the last N lines
+            all_lines = f.readlines()
+            last_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+            content = ''.join(last_lines)
         
-        if result.returncode == 0:
-            return jsonify({
-                'success': True, 
-                'content': result.stdout,
-                'file': log_file
-            })
-        else:
-            return jsonify({'error': f'Failed to read log file: {result.stderr}'}), 500
+        return jsonify({
+            'success': True, 
+            'content': content,
+            'file': log_file
+        })
             
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'Log read timeout'}), 500
+    except FileNotFoundError:
+        return jsonify({'error': 'Log file not found'}), 404
+    except PermissionError:
+        return jsonify({'error': 'Permission denied reading log file'}), 403
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/logs/follow')
 @login_required
 def follow_logs():
-    """Stream mail.log file updates"""
+    """Get latest mail.log file contents (for following)"""
     try:
         log_file = '/var/log/mail.log'
-        lines = request.args.get('lines', '20')
+        lines = int(request.args.get('lines', '20'))
         
-        # Use sudo tail -f to follow log file
-        import subprocess
-        result = subprocess.run(['sudo', 'tail', '-f', '-n', lines, log_file], 
-                              capture_output=True, text=True, timeout=5)
+        # Read log file directly (same as get_logs for simplicity)
+        with open(log_file, 'r') as f:
+            # Read all lines and get the last N lines
+            all_lines = f.readlines()
+            last_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+            content = ''.join(last_lines)
         
-        if result.returncode == 0:
-            return jsonify({
-                'success': True, 
-                'content': result.stdout,
-                'file': log_file
-            })
-        else:
-            return jsonify({'error': f'Failed to follow log file: {result.stderr}'}), 500
-            
-    except subprocess.TimeoutExpired:
-        # Timeout expected for tail -f, return what we got
         return jsonify({
             'success': True, 
-            'content': result.stdout if 'result' in locals() else '',
+            'content': content,
             'file': log_file
         })
+            
+    except FileNotFoundError:
+        return jsonify({'error': 'Log file not found'}), 404
+    except PermissionError:
+        return jsonify({'error': 'Permission denied reading log file'}), 403
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

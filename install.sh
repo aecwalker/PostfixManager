@@ -159,7 +159,21 @@ setup_config_permissions() {
         # Note: Permissions on /etc/postfix files are preserved as requested
     done
     
-    log_success "Configuration directories set up"
+    # Set up log file access using adm group (standard approach)
+    log_info "Setting up log file access..."
+    usermod -a -G adm "$SERVICE_USER"
+    
+    # Ensure mail.log is readable by adm group
+    if [[ -f "/var/log/mail.log" ]]; then
+        chgrp adm "/var/log/mail.log"
+        chmod 640 "/var/log/mail.log"
+    fi
+    
+    # Install logrotate configuration to maintain permissions
+    cp "$INSTALL_DIR/logrotate-mail.conf" "/etc/logrotate.d/mail-postfixmanager"
+    log_info "Installed logrotate configuration for mail.log"
+    
+    log_success "Configuration directories and log access set up"
 }
 
 install_systemd_service() {
@@ -175,13 +189,11 @@ install_systemd_service() {
 }
 
 setup_sudo_permissions() {
-    log_info "Setting up sudo permissions for Postfix reload and log access..."
+    log_info "Setting up sudo permissions for Postfix reload..."
     
     cat > "/etc/sudoers.d/$SERVICE_USER" << EOF
 # PostfixManager sudo permissions
 $SERVICE_USER ALL=(ALL) NOPASSWD: /bin/systemctl reload postfix
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/tail -n * /var/log/mail.log
-$SERVICE_USER ALL=(ALL) NOPASSWD: /usr/bin/tail -f -n * /var/log/mail.log
 EOF
     chmod 440 "/etc/sudoers.d/$SERVICE_USER"
     

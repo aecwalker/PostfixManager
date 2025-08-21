@@ -8,7 +8,7 @@ Type=simple
 User=postfixmanager
 Group=postfixmanager
 WorkingDirectory=/opt/postfixmanager
-Environment=PATH=/home/postfixmanager/.local/bin:$PATH
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/postfixmanager/.local/bin
 ExecStart=/usr/bin/python3 /opt/postfixmanager/app.py
 Restart=always
 RestartSec=10
